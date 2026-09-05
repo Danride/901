@@ -20,7 +20,6 @@ body{
   font-family:'Golos Text',system-ui,sans-serif;color:var(--text);
   min-height:100vh;overflow-x:hidden;position:relative;
 }
-/* фон: сетка + дрейфующее свечение + шум */
 body::before{content:'';position:fixed;inset:0;z-index:-3;
   background:
     linear-gradient(var(--line) 1px,transparent 1px),
@@ -110,23 +109,6 @@ header{display:flex;align-items:center;gap:10px;padding:10px 4px 18px;animation:
 .btn.gho{background:rgba(255,255,255,.06);color:var(--text);border:1px solid rgba(255,255,255,.14)}
 .btn.gho:hover{background:rgba(255,255,255,.1)}
 
-/* ── шкала ── */
-#scale{margin-top:44px;animation:fadeUp .6s .2s both}
-#scale h2{font-family:'Unbounded';font-weight:700;font-size:20px;margin-bottom:4px}
-#scale p{font-size:13px;color:var(--mut);margin-bottom:16px}
-.row{display:grid;grid-template-columns:88px 1fr;grid-template-areas:"r n" "r p";gap:4px 14px;
-  padding:13px 14px 13px 16px;border-left:4px solid var(--sev,#555);border-radius:0 12px 12px 0;
-  background:rgba(255,255,255,.03);margin-bottom:8px;transition:transform .18s,background .18s}
-.row:hover{transform:translateX(5px);background:rgba(255,255,255,.06)}
-.row .rng{grid-area:r;align-self:center;font-family:'Unbounded';font-weight:700;font-size:12.5px;color:var(--mut)}
-.row .nm{grid-area:n;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.row .nm b{font-family:'Unbounded';font-weight:700;font-size:14px;color:var(--sev)}
-.row .nm .st{font-size:13px;color:#d8a013;white-space:nowrap}
-.row .ph{grid-area:p;font-size:13px;color:#bcc7de;line-height:1.45}
-.row.you{outline:2px dashed var(--amber);outline-offset:-2px;background:rgba(255,201,63,.08)}
-.row.you .rng::after{content:'ВЫ ЗДЕСЬ';display:block;font-size:9px;letter-spacing:.14em;color:var(--amber);margin-top:4px}
-
-footer{margin-top:36px;font-size:11.5px;color:var(--mut);text-align:center;line-height:1.5}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(80px);background:#1c2842;border:1px solid rgba(255,255,255,.15);
   color:var(--text);font-size:13px;font-weight:600;padding:11px 18px;border-radius:99px;transition:transform .35s cubic-bezier(.2,1.4,.4,1);z-index:9;max-width:88vw;text-align:center}
 .toast.on{transform:translateX(-50%) translateY(0)}
@@ -195,14 +177,6 @@ footer{margin-top:36px;font-size:11.5px;color:var(--mut);text-align:center;line-
   </div>
 </section>
 
-<!-- ШКАЛА: 10 → 50 000+ -->
-<section id="scale">
-  <h2>Шкала ответственности</h2>
-  <p>от 10 улик до 50 000+. дальше — только вечность</p>
-  <div id="rows"></div>
-</section>
-
-<footer>* Подсчёт оценочный. Полиция шутит. Наверное.<br>Срок хранения дела: дольше, чем твоя память о старых лайках.</footer>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -224,12 +198,7 @@ const LEVELS=[
  {min:50000,max:1e9,   rng:'50 000+',  stars:5, sev:'#ff3b30', name:'Цифровой бессмертный', stamp:'БЕССМЕРТЕН',  phrase:'Аккаунт можно удалить, расследование — нет. Архив вечен, и ты теперь его часть.'}
 ];
 
-/* ═══ ВНИМАНИЕ, РАЗРАБОТЧИК ═══
-   Бридж НЕ умеет доставать историю постов/комментов/лайков из клиента — таких методов нет.
-   Реальные цифры считает твой бэкенд через VK API (wall.get, likes, comments) и отдаёт
-   JSON: {"posts":N,"comments":N,"likes":N}. Впиши адрес сюда: */
-const BACKEND_URL = ''; // например: 'https://твой-сервер/footprint'
-/* Пока бэкенда нет — детерминированная симуляция по user_id: у одного юзера всегда один результат. */
+const BACKEND_URL = ''; 
 
 const $=id=>document.getElementById(id);
 const fmt=n=>Math.round(n).toLocaleString('ru-RU');
@@ -249,22 +218,13 @@ async function fetchCounts(){
     const res=await fetch(`${BACKEND_URL}?user_id=${user.id}`);
     const j=await res.json();
     if(j&&Number.isFinite(j.posts+j.comments+j.likes))return j;
-  }catch(e){/* бэкенд лёг — полиция расстроена, считаем по симуляции */}}
+  }catch(e){}}
   return simulate(user.id);
 }
 const getLevel=t=>LEVELS.find(l=>t>=l.min&&t<=l.max);
 
 function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),2600)}
 function taptic(s){try{vkBridge.send('VKWebAppTapticImpactOccurred',{style:s||'heavy'})}catch(e){}}
-
-function buildTable(){
-  $('rows').innerHTML=LEVELS.map((l,i)=>`
-    <div class="row" data-i="${i}" style="--sev:${l.sev}">
-      <div class="rng">${l.rng}</div>
-      <div class="nm"><b>${l.name}</b><span class="st">${'★'.repeat(l.stars)}</span></div>
-      <div class="ph">${l.phrase}</div>
-    </div>`).join('');
-}
 
 async function startScan(){
   $('result').classList.remove('show');$('result').style.display='none';
@@ -289,18 +249,17 @@ function reveal(c){
   $('phrase').textContent=lvl.phrase.replace('{n}',fmt(total));
   $('stamp').textContent=lvl.stamp;$('stamp').classList.remove('hit');
   $('vP').textContent=fmt(c.posts);$('vC').textContent=fmt(c.comments);$('vL').textContent=fmt(c.likes);
-  // звёзды
+  
   let s='';for(let i=0;i<5;i++)s+=`<span class="${i<lvl.stars?'on':'off'}" style="animation-delay:${.6+i*.13}s">★</span>`;
   $('stars').innerHTML=s;
-  // тикающий итог
+  
   const t0=performance.now(),dur=1700;
   (function tick(now){const k=Math.min(1,(now-t0)/dur),e=1-Math.pow(2,-10*k);
     $('total').textContent=fmt(total*e);if(k<1)requestAnimationFrame(tick);})(t0);
-  // полосы улик
+    
   const mx=Math.max(c.posts,c.comments,c.likes,1);
   setTimeout(()=>{$('bP').style.width=(c.posts/mx*100)+'%';$('bC').style.width=(c.comments/mx*100)+'%';$('bL').style.width=(c.likes/mx*100)+'%'},80);
   setTimeout(()=>{$('stamp').classList.add('hit');taptic('heavy')},1100);
-  document.querySelectorAll('.row').forEach(r=>r.classList.toggle('you',LEVELS[r.dataset.i]===lvl));
 }
 
 $('share').onclick=async()=>{
@@ -319,11 +278,10 @@ async function init(){
     await vkBridge.send('VKWebAppInit');
     const u=await vkBridge.send('VKWebAppGetUserInfo');
     if(u&&u.id){user=u;if(u.photo_100)$('ava').src=u.photo_100;}
-  }catch(e){/* открыто вне ВК — режим тестовой комнаты для допросов */}
+  }catch(e){}
   $('caseNo').textContent=user.id;
   $('dCase').textContent='дело №'+user.id;
-  $('uname').textContent=user.first_name||'Аноим';
-  buildTable();
+  $('uname').textContent=user.first_name||'Аноним';
   await sleep(350);startScan();
 }
 init();
