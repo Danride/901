@@ -10,8 +10,8 @@
 <style>
 :root{
   --ink:#0c1120; --line:rgba(120,150,220,.13);
-  --paper:#f2e9d4; --paper2:#e6dabd; --ptext:#20222b;
-  --blue:#4d7cfe; --amber:#ffc93f; --orange:#ff9a3d; --red:#ef5248; --green:#7fbf7a;
+  --paper:#f2e9d4; --paper2:#e6dabd;
+  --blue:#4d7cfe; --amber:#ffc93f; --orange:#ff9a3d; --red:#ef5248; --green:#5fae5a;
   --text:#e9edf8; --mut:#8ea0c2;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -58,7 +58,7 @@ h1 small{display:block;font-family:'Golos Text';font-weight:500;font-size:13px;c
 /* досье */
 #result{display:none}
 #result.show{display:block;animation:fadeUp .45s both}
-.dossier{position:relative;background:linear-gradient(160deg,var(--paper),var(--paper2));color:var(--ptext);
+.dossier{position:relative;background:linear-gradient(160deg,var(--paper),var(--paper2));color:#20222b;
   border-radius:8px;padding:20px 18px;transform:rotate(-.5deg);box-shadow:0 22px 50px rgba(0,0,0,.5)}
 .d-top{display:flex;justify-content:space-between;font-size:10.5px;font-weight:800;letter-spacing:.15em;color:#8a7a54;text-transform:uppercase;border-bottom:2px dashed #b8a578;padding-bottom:9px;margin-bottom:14px}
 .d-lbl{font-size:10.5px;font-weight:800;letter-spacing:.22em;color:#8a7a54;text-transform:uppercase;margin-bottom:3px}
@@ -70,13 +70,16 @@ h1 small{display:block;font-family:'Golos Text';font-weight:500;font-size:13px;c
 @keyframes popStar{from{transform:scale(0) rotate(-60deg);opacity:0}}
 .d-phrase{font-size:15px;font-weight:500;line-height:1.45;border-left:4px solid var(--red);padding-left:11px;margin-bottom:16px}
 
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
-.stat{background:rgba(30,35,60,.06);border:1px solid rgba(30,35,60,.1);border-radius:10px;padding:10px 6px 9px;text-align:center;
-  opacity:0;animation:fadeUp .4s both}
-.stat .ic{font-size:17px}
-.stat .n{font-family:'Unbounded';font-weight:700;font-size:14.5px;color:#1d2333;margin:3px 0 1px}
-.stat .t{font-size:9.5px;font-weight:800;letter-spacing:.1em;color:#8a7a54;text-transform:uppercase}
-.stat .real{font-size:8.5px;color:#4a7d46;font-weight:800;letter-spacing:.06em}
+/* статистика улик */
+.stats{display:grid;gap:7px}
+.srow{display:grid;grid-template-columns:22px 96px 1fr 62px;align-items:center;gap:8px;
+  background:rgba(30,35,60,.05);border-radius:8px;padding:8px 10px;opacity:0;animation:fadeUp .4s both}
+.si{font-size:15px}
+.sl{font-size:12px;font-weight:700;color:#4c4436}
+.sl small{display:block;font-size:8.5px;font-weight:800;color:#4a7d46;letter-spacing:.05em}
+.track{height:9px;border-radius:5px;background:rgba(30,35,60,.13);overflow:hidden}
+.track i{display:block;height:100%;width:0;border-radius:5px;transition:width 1s cubic-bezier(.2,.8,.2,1)}
+.sv{font-family:'Unbounded';font-weight:700;font-size:11.5px;text-align:right;color:#1d2333}
 
 .stamp{position:absolute;top:12px;right:12px;font-family:'Unbounded';font-weight:900;font-size:15px;letter-spacing:.07em;
   color:var(--red);border:3px solid var(--red);border-radius:6px;padding:5px 10px;transform:rotate(-12deg) scale(0);opacity:0}
@@ -140,6 +143,7 @@ footer{margin-top:32px;font-size:11.5px;color:var(--mut);text-align:center}
     <div class="d-name" id="lname">—</div>
     <div class="d-stars" id="stars"></div>
     <div class="d-phrase" id="phrase">—</div>
+    <div class="d-lbl" style="margin-bottom:8px">Опись улик</div>
     <div class="stats" id="stats"></div>
   </div>
   <div class="btns">
@@ -169,10 +173,10 @@ const LEVELS=[
  {min:50000,max:1e9,   stars:5, name:'Цифровой бессмертный',stamp:'БЕССМЕРТЕН',    phrase:'Аккаунт можно удалить, расследование — нет. Архив вечен, и ты теперь его часть.'}
 ];
 
-/* Реальные цифры постов/комментов/лайков/фото/видео/музыки бридж из клиента НЕ отдаёт.
-   Считает твой бэкенд (VK API: wall.get, users.getFollowers, photos.get, video.get, audio)
-   и возвращает: {"posts":N,"comments":N,"likes":N,"followers":N,"reposts":N,"photos":N,"videos":N,"tracks":N}
-   Друзей бридж умеет сам (VKWebAppGetFriends) — их берём по-настоящему. */
+/* Реальные цифры (кроме друзей) бридж из клиента НЕ отдаёт — их считает твой бэкенд
+   через VK API и возвращает JSON:
+   {"posts":N,"comments":N,"likes":N,"reposts":N,"followers":N,"photos":N,"videos":N,"tracks":N,"friends":N}
+   Пока бэкенда нет — стабильная симуляция по user_id. */
 const BACKEND_URL='';
 
 const $=id=>document.getElementById(id);
@@ -181,15 +185,25 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const getLevel=t=>LEVELS.find(l=>t>=l.min&&t<=l.max);
 let user={id:Math.floor(Math.random()*9e5)+1e4,first_name:'Аноним'},total=0,lvl=null,scans=0;
 
+/* шкалы: ключ, иконка, подпись, цвет */
+const METRICS=[
+ ['likes','❤️','Лайки','#ef5248'],
+ ['comments','💬','Комменты','#ff9a3d'],
+ ['posts','📝','Посты','#4d7cfe'],
+ ['reposts','🔁','Репосты','#37b3a6'],
+ ['friends','👥','Друзья','#5fae5a'],
+ ['followers','📣','Подписчики','#d8a013'],
+ ['photos','📷','Фото','#e0609c'],
+ ['videos','🎬','Видео','#8a6cf0'],
+ ['tracks','🎵','Музыка','#3aa0e8']
+];
+
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function simulate(id){
   const r=mulberry32((id*2654435761)>>>0);
   const ri=(a,b)=>Math.round(a+r()*(b-a));
-  return{
-    likes:ri(100,42000), comments:ri(20,6000), posts:ri(5,1500), reposts:ri(3,700),
-    photos:ri(10,2800), videos:ri(2,350), tracks:ri(10,2200),
-    followers:ri(0,4000), friends:ri(25,800)
-  };
+  return{likes:ri(100,42000),comments:ri(20,6000),posts:ri(5,1500),reposts:ri(3,700),
+         friends:ri(25,800),followers:ri(0,4000),photos:ri(10,2800),videos:ri(2,350),tracks:ri(10,2200)};
 }
 async function fetchCounts(){
   let d;
@@ -199,11 +213,8 @@ async function fetchCounts(){
     if(j&&Number.isFinite(j.posts+j.likes))d={...simulate(user.id),...j};
   }catch(e){}}
   if(!d)d=simulate(user.id);
-  // единственное честное место: реальные друзья через бридж
-  try{
-    const f=await vkBridge.send('VKWebAppGetFriends');
-    if(f&&f.items)d.friends=f.items.length,d._friendsReal=true;
-  }catch(e){}
+  // друзья — единственное, что бридж реально умеет: берём только число
+  try{const f=await vkBridge.send('VKWebAppGetFriends');if(f&&f.items)d.friends=f.items.length,d.friendsReal=true;}catch(e){}
   return d;
 }
 
@@ -219,32 +230,34 @@ async function startScan(){
   for(let i=0;i<stages.length;i++){
     $('status').textContent=stages[i];
     $('pfill').style.width=Math.round(8+i*(88/(stages.length-1)))+'%';
-    await sleep(420+Math.random()*240);
+    await sleep(400+Math.random()*220);
   }
   const c=await countsP;$('pfill').style.width='100%';await sleep(380);
   reveal(c);
 }
 
-const TILES=[
-  ['likes','❤️','лайки'],['comments','💬','комменты'],['posts','📝','посты'],
-  ['reposts','🔁','репосты'],['friends','👥','друзья'],['followers','📣','подписчики'],
-  ['photos','📷','фото'],['videos','🎬','видео'],['tracks','🎵','музыка']
-];
-
 function reveal(c){
-  total=Object.keys(c).reduce((s,k)=>s+(typeof c[k]==='number'&&k[0]!=='_'?c[k]:0),0);
+  total=METRICS.reduce((s,[k])=>s+(+c[k]||0),0);
   lvl=getLevel(total);scans++;
   $('scan').style.display='none';$('result').style.display='block';$('result').classList.add('show');
   $('lname').textContent=lvl.name;
   $('phrase').textContent=lvl.phrase.replace('{n}',fmt(total));
   $('stamp').textContent=lvl.stamp;$('stamp').classList.remove('hit');
-  let s='';for(let i=0;i<5;i++)s+=`<span class="${i<lvl.stars?'on':'off'}" style="animation-delay:${.5+i*.12}s">★</span>`;
+  let s='';for(let i=0;i<5;i++)s+=`<span class="${i<lvl.stars?'on':'off'}" style="animation-delay:${.45+i*.12}s">★</span>`;
   $('stars').innerHTML=s;
-  $('stats').innerHTML=TILES.map(([k,ic,t],i)=>
-    `<div class="stat" style="animation-delay:${.3+i*.07}s">
-       <div class="ic">${ic}</div><div class="n">${fmt(c[k]||0)}</div>
-       <div class="t">${t}${k==='friends'&&c._friendsReal?' · точное':''}</div>
-     </div>`).join('');
+
+  // опись улик со шкалами
+  const mx=Math.max(...METRICS.map(([k])=>+c[k]||0),1);
+  $('stats').innerHTML=METRICS.map(([k,ic,lbl,col],i)=>`
+    <div class="srow" style="animation-delay:${.25+i*.06}s">
+      <span class="si">${ic}</span>
+      <span class="sl">${lbl}${k==='friends'&&c.friendsReal?'<small>точное</small>':''}</span>
+      <span class="track"><i data-w="${Math.max(3,(c[k]||0)/mx*100)}" style="background:${col};transition-delay:${.4+i*.08}s"></i></span>
+      <span class="sv">${fmt(c[k]||0)}</span>
+    </div>`).join('');
+  setTimeout(()=>$('stats').querySelectorAll('.track i').forEach(i=>i.style.width=i.dataset.w+'%'),80);
+
+  // тикающий итог
   const t0=performance.now(),dur=1600;
   (function tick(now){const k=Math.min(1,(now-t0)/dur),e=1-Math.pow(2,-10*k);
     $('total').textContent=fmt(total*e);if(k<1)requestAnimationFrame(tick)})(t0);
