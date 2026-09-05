@@ -1,198 +1,15 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-  <title>Цифровой след</title>
-  <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', sans-serif;
-      background: #ebedf0;
-      color: #000;
-      padding-bottom: 40px;
-      -webkit-font-smoothing: antialiased;
-    }
-    .header {
-      background: #fff;
-      padding: 16px;
-      text-align: center;
-      font-size: 18px;
-      font-weight: 600;
-      border-bottom: 1px solid #dce1e6;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-    .container { padding: 12px; }
-    .card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 12px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-    }
-    .total { text-align: center; padding: 24px 16px; }
-    .total-number {
-      font-size: 56px;
-      font-weight: 700;
-      color: #2688eb;
-      line-height: 1;
-    }
-    .total-label { color: #818c99; font-size: 14px; margin-top: 8px; }
-    .verdict {
-      background: #f5f5f7;
-      padding: 12px;
-      border-radius: 8px;
-      margin-top: 12px;
-      font-size: 14px;
-      line-height: 1.4;
-    }
-    .section-title {
-      font-size: 13px;
-      color: #818c99;
-      text-transform: uppercase;
-      font-weight: 600;
-      padding: 8px 4px;
-      letter-spacing: 0.3px;
-    }
-    .row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid #ebedf0;
-    }
-    .row:last-child { border-bottom: none; }
-    .row-label { font-size: 15px; }
-    .row-value { font-size: 15px; font-weight: 600; color: #2688eb; }
-    .progress {
-      height: 4px;
-      background: #ebedf0;
-      border-radius: 2px;
-      margin-top: 6px;
-      overflow: hidden;
-    }
-    .progress-bar {
-      height: 100%;
-      background: #2688eb;
-      border-radius: 2px;
-      transition: width 0.6s ease;
-    }
-    .locked { text-align: center; padding: 24px 16px; }
-    .locked-text { color: #818c99; font-size: 14px; margin-bottom: 12px; }
-    .btn {
-      display: block;
-      width: 100%;
-      padding: 12px;
-      border: none;
-      border-radius: 10px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.2s;
-      text-align: center;
-      text-decoration: none;
-    }
-    .btn:active { opacity: 0.7; }
-    .btn-primary { background: #2688eb; color: #fff; }
-    .btn-secondary { background: #f5f5f7; color: #2688eb; }
-    .spinner { text-align: center; padding: 60px 0; color: #818c99; }
-    .spinner::after {
-      content: '';
-      display: inline-block;
-      width: 32px;
-      height: 32px;
-      border: 3px solid #ebedf0;
-      border-top-color: #2688eb;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .verdict-card {
-      background: #f5f5f7;
-      padding: 10px 12px;
-      border-radius: 8px;
-      margin-bottom: 8px;
-      font-size: 14px;
-      line-height: 1.4;
-    }
-    .verdict-card:last-child { margin-bottom: 0; }
-    .hidden { display: none !important; }
-    .error-box {
-      padding: 20px;
-      text-align: center;
-      color: #e64646;
-    }
-    .error-box strong { color: #000; }
-  </style>
-</head>
-<body>
-
-<div class="header">Цифровой след</div>
-
-<div class="container">
-  <!-- Загрузка или Ошибка -->
-  <div id="loading" class="spinner">Сканируем профиль...</div>
-
-  <!-- Основной контент -->
-  <div id="content" class="hidden">
-    <!-- Общий счёт -->
-    <div class="card total">
-      <div class="total-number" id="total">0</div>
-      <div class="total-label">действий ты оставил в ВК</div>
-      <div class="verdict" id="totalVerdict"></div>
-    </div>
-
-    <!-- Топ-3 категории (бесплатно) -->
-    <div class="section-title">Топ активности</div>
-    <div class="card" id="topList"></div>
-
-    <!-- Замок -->
-    <div id="lockedBlock" class="card locked">
-      <div class="locked-text">
-        🔒 Полный разбор всех категорий<br>и персональные вердикты
-      </div>
-      <button class="btn btn-primary" onclick="unlockWithAd()">
-        Посмотреть рекламу и открыть
-      </button>
-    </div>
-
-    <!-- Полный разбор (после рекламы) -->
-    <div id="fullBlock" class="hidden">
-      <div class="section-title">Полный цифровой след</div>
-      <div class="card" id="fullList"></div>
-
-      <div class="section-title">Вердикты</div>
-      <div class="card" id="verdictsList"></div>
-    </div>
-
-    <!-- Поделиться -->
-    <button class="btn btn-secondary" onclick="shareResult()" style="margin-top: 4px;">
-      Поделиться результатом
-    </button>
-  </div>
-</div>
-
 <script>
   let footprint = null;
 
   async function loadFootprint() {
     try {
-      // 1. Проверяем, запущен ли VK Bridge
-      const isSupported = await vkBridge.supports('VKWebAppInit');
-      if (!isSupported) {
-        throw new Error('NOT_VK_ENV');
-      }
-
-      // 2. Инициализируем
+      // 1. Инициализация
       await vkBridge.send('VKWebAppInit');
       
-      // 3. Получаем данные пользователя
+      // 2. Получаем user info (быстро, без API)
       const userInfo = await vkBridge.send('VKWebAppGetUserInfo');
       
-      // 4. Получаем counters
+      // 3. ОДИН запрос к API — получаем counters
       const userRes = await vkBridge.send('VKWebAppCallAPIMethod', {
         method: 'users.get',
         params: {
@@ -205,23 +22,7 @@
       const user = userRes.response[0];
       const c = user.counters || {};
 
-      // 5. Получаем посты (с задержкой, чтобы не словить rate limit)
-      let postsCount = 0;
-      await new Promise(r => setTimeout(r, 300));
-      try {
-        const wallRes = await vkBridge.send('VKWebAppCallAPIMethod', {
-          method: 'wall.get',
-          params: { 
-            owner_id: userInfo.id,
-            count: 1, 
-            v: '5.131' 
-          }
-        });
-        postsCount = wallRes.response.count || 0;
-      } catch (e) {
-        postsCount = 0; // Стена закрыта или нет доступа
-      }
-
+      // 4. Собираем данные (без wall.get — он медленный)
       footprint = {
         name: `${user.first_name} ${user.last_name}`,
         photos: c.photos || 0,
@@ -232,7 +33,7 @@
         friends: c.friends || 0,
         groups: c.groups || 0,
         followers: c.followers || 0,
-        posts: postsCount,
+        posts: 0, // Убираем посты — они требуют отдельный запрос
         pages: c.pages || 0,
       };
 
@@ -243,29 +44,23 @@
       render();
 
     } catch (e) {
-      console.error('Ошибка загрузки:', e);
+      console.error('Ошибка:', e);
       const loadingEl = document.getElementById('loading');
       
       if (e.message === 'NOT_VK_ENV' || (e.error_data && e.error_data.error_code === 1)) {
         loadingEl.className = 'error-box';
         loadingEl.innerHTML = `
           <div style="font-size: 48px; margin-bottom: 16px;">🚫</div>
-          <strong>Апп запущен вне ВКонтакте</strong><br><br>
-          VK Bridge не может получить твои данные, потому что ты открыл прямую ссылку на файл.<br><br>
-          <strong>Как запустить правильно:</strong><br>
-          1. Зайди в управление приложением: vk.com/editapp<br>
-          2. Вставь эту ссылку в поле "URL приложения"<br>
-          3. Открой приложение через ссылку: <strong>https://vk.com/appТВОЙ_ID</strong><br>
-          (или найди его в разделе "Мини-приложения" в мобильном VK)
+          <strong>Открой через vk.com/appТВОЙ_ID</strong><br><br>
+          Прямая ссылка не работает.
         `;
       } else {
         loadingEl.className = 'error-box';
         loadingEl.innerHTML = `
           <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
-          <strong>Ошибка VK API</strong><br>
-          ${e.error_data?.error_msg || e.message || 'Неизвестная ошибка'}<br>
-          <small>Код: ${e.error_data?.error_code || 'N/A'}</small><br><br>
-          Убедись, что ты добавил себя в тестировщики приложения в настройках.
+          <strong>Ошибка</strong><br>
+          ${e.error_data?.error_msg || e.message}<br>
+          <small>Код: ${e.error_data?.error_code || 'N/A'}</small>
         `;
       }
     }
@@ -290,11 +85,6 @@
     else if (fp.audios > 100) cats.push(`🎵 ${fp.audios} треков — меломан средней руки.`);
     else cats.push(`🎵 ${fp.audios} треков — музыка для тебя — тёмный лес.`);
 
-    if (fp.posts > 1000) cats.push(`📝 ${fp.posts} постов — пишешь больше Толстого. Но хуже.`);
-    else if (fp.posts > 100) cats.push(`📝 ${fp.posts} постов — умеренный графоман.`);
-    else if (fp.posts > 10) cats.push(`📝 ${fp.posts} постов — редкий гость на своей стене.`);
-    else cats.push(`📝 ${fp.posts} постов — стена пустее обещаний политиков.`);
-
     if (fp.friends > 500) cats.push(`👥 ${fp.friends} друзей — душа компании или добавляешь всех.`);
     else if (fp.friends > 100) cats.push(`👥 ${fp.friends} друзей — нормальный круг.`);
     else cats.push(`👥 ${fp.friends} друзей — интроверт уровня «бог».`);
@@ -318,7 +108,6 @@
     const categories = [
       { key: 'photos', label: '📸 Фотографии' },
       { key: 'audios', label: '🎵 Аудиозаписи' },
-      { key: 'posts', label: '📝 Посты' },
       { key: 'friends', label: '👥 Друзья' },
       { key: 'groups', label: '🏢 Группы' },
       { key: 'videos', label: '🎬 Видео' },
@@ -367,7 +156,6 @@
       document.getElementById('lockedBlock').classList.add('hidden');
       document.getElementById('fullBlock').classList.remove('hidden');
     } catch (e) {
-      // Если реклама не загрузилась, всё равно открываем, чтобы не терять пользователя
       document.getElementById('lockedBlock').classList.add('hidden');
       document.getElementById('fullBlock').classList.remove('hidden');
     }
@@ -376,8 +164,7 @@
   async function shareResult() {
     if (!footprint) return;
     const text = `🔍 Мой цифровой след в ВК: ${footprint.total.toLocaleString('ru-RU')} действий!\n` +
-      `📸 ${footprint.photos} фото | 🎵 ${footprint.audios} треков | ` +
-      `📝 ${footprint.posts} постов | 👥 ${footprint.friends} друзей\n` +
+      `📸 ${footprint.photos} фото | 🎵 ${footprint.audios} треков | 👥 ${footprint.friends} друзей\n` +
       `А какой след у тебя?`;
 
     try {
@@ -387,9 +174,5 @@
     }
   }
 
-  // Старт при загрузке страницы
   loadFootprint();
 </script>
-
-</body>
-</html>
